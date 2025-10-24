@@ -3,7 +3,6 @@ from tkinter import ttk, messagebox, filedialog
 import sqlite3
 import datetime
 
-# --- Importaciones para Estilos (ttkbootstrap) ---
 try:
     from ttkbootstrap import Style
     from ttkbootstrap.constants import *
@@ -11,7 +10,6 @@ except ImportError:
     messagebox.showerror("Error Fatal", "Falta 'ttkbootstrap'. Ejecuta 'pip install ttkbootstrap'")
     exit()
 
-# --- Importaciones para Exportación (pandas, reportlab) ---
 try:
     import pandas as pd
     from reportlab.lib.pagesizes import letter
@@ -24,12 +22,6 @@ except ImportError:
     EXPORT_AVAILABLE = False
     print("ADVERTENCIA: Las funciones de exportación (Excel/PDF) no estarán disponibles sin 'pandas' y 'reportlab'.")
 
-
-# ------------------------------------------
-
-# ====================================================================
-#           CLASE DE RECEPCIÓN DE MERCANCÍA (AUMENTO DE STOCK)
-# ====================================================================
 
 class RecepcionMercanciaWindow:
     def __init__(self, master, conn, refresh_callback):
@@ -282,7 +274,6 @@ class POSApp:
         frame.grid_rowconfigure(1, weight=1)
 
     def create_venta_widgets(self, frame):
-        # ... (Widgets de venta, carrito y total, sin cambios) ...
         # Control de Caja (Apertura/Cierre)
         caja_frame = ttk.LabelFrame(frame, text="Control de Caja", padding=10, bootstyle="secondary")
         caja_frame.pack(fill='x', pady=5)
@@ -324,7 +315,8 @@ class POSApp:
         ttk.Label(total_frame, text="TOTAL A PAGAR:", font=("Segoe UI", 16, "bold"), bootstyle="inverse-info").pack(
             side='left', padx=5)
 
-        self.total_label = ttk.Label(total_frame, text="$0.00", font=("Segoe UI", 20, "bold"), bootstyle="primary")
+        # APLICACIÓN DE C$ AQUÍ
+        self.total_label = ttk.Label(total_frame, text="C$0.00", font=("Segoe UI", 20, "bold"), bootstyle="primary")
         self.total_label.pack(side='right', padx=5)
 
         # Botón de Finalizar Venta
@@ -402,6 +394,7 @@ class POSApp:
             messagebox.showwarning("Advertencia", "Esta venta ya ha sido devuelta.")
             return
 
+        # CAMBIO 1: Reemplazar $ por C$ en el mensaje de confirmación
         if not messagebox.askyesno("Confirmar Devolución",
                                    f"¿Estás seguro de devolver la venta ID {venta_id} por {total}? Se repondrá el stock y se ajustará la ganancia de caja."):
             return
@@ -410,7 +403,7 @@ class POSApp:
             # 1. Analizar los detalles para reponer el stock
             items = detalles.split(' | ')
             for item in items:
-                # Ejemplo: 'Producto A (2 x $10.00)'
+                # Ejemplo: 'Producto A (2 x C$10.00)'
                 # Extraemos Nombre, Cantidad, Precio
                 nombre = item.split('(')[0].strip()
                 cantidad_precio = item.split('(')[1].replace(')', '')
@@ -433,7 +426,8 @@ class POSApp:
             self.cursor.execute("UPDATE ventas SET es_devolucion=1 WHERE id=?", (venta_id,))
 
             # 3. Ajustar la ganancia de la caja (asumiendo que total es ganancia bruta en este sistema)
-            total_devuelto = float(total.replace('$', ''))
+            # CAMBIO 3: Reemplazar 'C$' o '$' al parsear el total
+            total_devuelto = float(total.replace('C$', '').replace('$', ''))
 
             if self.caja_abierta:
                 self.ganancia_caja_actual -= total_devuelto
@@ -469,11 +463,12 @@ class POSApp:
             estado_display = "DEVOLUCIÓN" if es_devolucion else "VENDIDO"
             tag = "devolucion" if es_devolucion else "vendido"
 
+            # CAMBIO 4: Reemplazar $ por C$ al insertar en el Treeview
             self.ventas_tree.insert("", "end", values=(
                 venta_id,
                 fecha.split(' ')[0],
-                f"${total:.2f}",
-                detalles,
+                f"C${total:.2f}",
+                detalles.replace('$', 'C$'),  # Reemplazar $ por C$ dentro del detalle para consistencia
                 estado_display
             ), tags=(tag,))
 
@@ -487,7 +482,7 @@ class POSApp:
     # ====================================================================
 
     def cargar_productos(self, busqueda=""):
-        # ... (Función de cargar productos sin cambios) ...
+        # ... (Función de cargar productos) ...
         for item in self.productos_tree.get_children():
             self.productos_tree.delete(item)
 
@@ -501,7 +496,8 @@ class POSApp:
         for prod in productos:
             tag = 'low_stock' if prod[3] < 5 else ''
             stock_str = f"⚠️ {prod[3]}" if prod[3] < 5 else prod[3]
-            self.productos_tree.insert("", "end", values=(prod[0], prod[1], prod[2], stock_str, f"${prod[4]:.2f}"),
+            # CAMBIO 5: Reemplazar $ por C$ al insertar en el Treeview de productos
+            self.productos_tree.insert("", "end", values=(prod[0], prod[1], prod[2], stock_str, f"C${prod[4]:.2f}"),
                                        tags=(tag,))
 
         self.productos_tree.tag_configure('low_stock', foreground='red', font=("Segoe UI", 10, "bold"))
@@ -606,7 +602,7 @@ class POSApp:
             messagebox.showerror("Error de BD", f"Ocurrió un error al guardar: {e}")
 
     def eliminar_producto(self):
-        # ... (Función de eliminar producto sin cambios) ...
+        # ... (Función de eliminar producto) ...
         selected_item = self.productos_tree.focus()
         if not selected_item:
             messagebox.showerror("Error", "Selecciona un producto para eliminar.")
@@ -626,7 +622,7 @@ class POSApp:
                 messagebox.showerror("Error de BD", f"Ocurrió un error al eliminar: {e}")
 
     def check_caja_status(self):
-        # ... (Función de chequear estado de caja sin cambios) ...
+        # ... (Función de chequear estado de caja) ...
         self.cursor.execute("SELECT id, ganancia_total FROM caja WHERE estado='Abierta' ORDER BY id DESC LIMIT 1")
         last_caja = self.cursor.fetchone()
 
@@ -642,10 +638,11 @@ class POSApp:
             self.update_caja_gui()
 
     def toggle_caja(self):
-        # ... (Función de abrir/cerrar caja sin cambios) ...
+        # ... (Función de abrir/cerrar caja) ...
         if self.caja_abierta:
+            # CAMBIO 6: Reemplazar $ por C$ en el mensaje de cierre de caja
             if not messagebox.askyesno("Cerrar Caja",
-                                       f"¿Deseas cerrar la caja? Ganancia total actual: ${self.ganancia_caja_actual:.2f}"):
+                                       f"¿Deseas cerrar la caja? Ganancia total actual: C${self.ganancia_caja_actual:.2f}"):
                 return
 
             fecha_cierre = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -655,8 +652,9 @@ class POSApp:
 
             self.caja_abierta = False
             self.ganancia_caja_actual = 0.0
+            # CAMBIO 7: Reemplazar $ por C$ en el mensaje de éxito de cierre de caja
             messagebox.showinfo("Caja Cerrada",
-                                f"Caja cerrada exitosamente. Ganancia registrada: ${self.ganancia_caja_actual:.2f}")
+                                f"Caja cerrada exitosamente. Ganancia registrada: C${self.ganancia_caja_actual:.2f}")
             self.cargar_registros_caja()
 
         else:
@@ -672,9 +670,10 @@ class POSApp:
         self.vaciar_carrito()
 
     def update_caja_gui(self):
-        # ... (Función de actualizar GUI de caja sin cambios) ...
+        # ... (Función de actualizar GUI de caja) ...
         if self.caja_abierta:
-            self.caja_status_label.config(text=f"CAJA ABIERTA | Ganancia: ${self.ganancia_caja_actual:.2f}",
+            # CAMBIO 8: Reemplazar $ por C$ en el label de estado de caja
+            self.caja_status_label.config(text=f"CAJA ABIERTA | Ganancia: C${self.ganancia_caja_actual:.2f}",
                                           bootstyle="success")
             self.caja_button.config(text="Cerrar Caja", bootstyle="danger")
         else:
@@ -682,7 +681,7 @@ class POSApp:
             self.caja_button.config(text="Abrir Caja", bootstyle="success")
 
     def add_to_carrito(self):
-        # ... (Función de añadir al carrito sin cambios) ...
+        # ... (Función de añadir al carrito) ...
         if not self.caja_abierta:
             messagebox.showerror("Error", "Debes abrir caja para realizar ventas.")
             return
@@ -732,7 +731,7 @@ class POSApp:
         self.update_carrito_gui()
 
     def update_carrito_gui(self):
-        # ... (Función de actualizar GUI del carrito sin cambios) ...
+        # ... (Función de actualizar GUI del carrito) ...
         for item in self.carrito_tree.get_children():
             self.carrito_tree.delete(item)
 
@@ -745,21 +744,24 @@ class POSApp:
             self.carrito_tree.insert("", "end", values=(
                 data['nombre'],
                 data['cantidad'],
-                f"${data['precio']:.2f}",
-                f"${subtotal:.2f}"
+                # CAMBIO 9: Reemplazar $ por C$ en el precio unitario
+                f"C${data['precio']:.2f}",
+                # CAMBIO 10: Reemplazar $ por C$ en el subtotal
+                f"C${subtotal:.2f}"
             ), tags=(prod_id,))
 
-        self.total_label.config(text=f"${total_venta:.2f}")
+        # CAMBIO 11: Reemplazar $ por C$ en el label total
+        self.total_label.config(text=f"C${total_venta:.2f}")
 
     def vaciar_carrito(self):
-        # ... (Función de vaciar carrito sin cambios) ...
+        # ... (Función de vaciar carrito) ...
         if self.productos_carrito:
             if messagebox.askyesno("Confirmar", "¿Deseas vaciar el carrito actual?"):
                 self.productos_carrito = {}
                 self.update_carrito_gui()
 
     def finalizar_venta(self):
-        # ... (Función de finalizar venta sin cambios en lógica central) ...
+        # ... (Función de finalizar venta) ...
         if not self.caja_abierta:
             messagebox.showerror("Error", "Debes abrir caja para realizar ventas.")
             return
@@ -768,7 +770,8 @@ class POSApp:
             messagebox.showerror("Error", "El carrito está vacío.")
             return
 
-        total_venta = float(self.total_label.cget("text").replace('$', ''))
+        # CAMBIO 12: Reemplazar 'C$' al obtener el total de la etiqueta
+        total_venta = float(self.total_label.cget("text").replace('C$', ''))
         fecha_venta = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         detalles_venta = []
         ganancia_bruta = 0.0
@@ -780,7 +783,8 @@ class POSApp:
 
             self.cursor.execute("UPDATE productos SET stock = stock - ? WHERE id=?", (cantidad, prod_id))
 
-            detalles_venta.append(f"{nombre} ({cantidad} x ${precio:.2f})")
+            # CAMBIO 13: Reemplazar $ por C$ en los detalles que se guardan
+            detalles_venta.append(f"{nombre} ({cantidad} x C${precio:.2f})")
 
             ganancia_bruta += (precio * cantidad)
 
@@ -795,7 +799,8 @@ class POSApp:
 
         self.conn.commit()
 
-        messagebox.showinfo("Venta Exitosa", f"Venta registrada por ${total_venta:.2f}")
+        # CAMBIO 14: Reemplazar $ por C$ en el mensaje de éxito
+        messagebox.showinfo("Venta Exitosa", f"Venta registrada por C${total_venta:.2f}")
         self.productos_carrito = {}
         self.update_carrito_gui()
         self.cargar_productos()
@@ -803,7 +808,7 @@ class POSApp:
         self.update_caja_gui()
 
     def exportar_a_excel(self):
-        # ... (Función de exportar a Excel sin cambios) ...
+        # ... (Función de exportar a Excel) ...
         if not EXPORT_AVAILABLE:
             messagebox.showerror("Error de Exportación", "Las librerías 'pandas' y 'reportlab' no están instaladas.")
             return
@@ -820,6 +825,9 @@ class POSApp:
             columnas = ["ID Venta", "Fecha", "Total", "Detalles de Venta", "Es Devolución (1/0)"]
             df = pd.DataFrame(data, columns=columnas)
 
+            # Forzamos el cambio de $ a C$ en los detalles antes de exportar
+            df['Detalles de Venta'] = df['Detalles de Venta'].str.replace('$', 'C$')
+
             filepath = filedialog.asksaveasfilename(
                 defaultextension=".xlsx",
                 filetypes=[("Archivos Excel", "*.xlsx")],
@@ -834,7 +842,7 @@ class POSApp:
             messagebox.showerror("Error de Exportación", f"Ocurrió un error al exportar a Excel: {e}")
 
     def exportar_a_pdf(self):
-        # ... (Función de exportar a PDF sin cambios) ...
+        # ... (Función de exportar a PDF) ...
         if not EXPORT_AVAILABLE:
             messagebox.showerror("Error de Exportación", "Las librerías 'pandas' y 'reportlab' no están instaladas.")
             return
@@ -871,14 +879,17 @@ class POSApp:
             total_ventas = 0.0
 
             for row in data:
-                total_str = f"${row[2]:.2f}"
+                # CAMBIO 15: Reemplazar $ por C$ al mostrar el total
+                total_str = f"C${row[2]:.2f}"
+                detalles_str = row[3].replace('$', 'C$')  # Asegurar que los detalles en el PDF también usen C$
+
                 if row[4] == 0:
                     total_ventas += row[2]  # Solo suma las ventas no devueltas al total general
                     estado = "VENDIDO"
                 else:
                     estado = "DEVOLUCIÓN"
 
-                table_data.append([row[0], row[1].split(' ')[0], total_str, row[3], estado])
+                table_data.append([row[0], row[1].split(' ')[0], total_str, detalles_str, estado])
 
             table = Table(table_data, colWidths=[50, 80, 70, 270, 70])
 
@@ -898,8 +909,9 @@ class POSApp:
             elementos.append(table)
 
             elementos.append(Paragraph("<br/>", styles['Normal']))
+            # CAMBIO 16: Reemplazar $ por C$ en el total neto del PDF
             elementos.append(
-                Paragraph(f"TOTAL NETO DE VENTAS (SIN DEVOLUCIONES): <font color='red'>${total_ventas:.2f}</font>",
+                Paragraph(f"TOTAL NETO DE VENTAS (SIN DEVOLUCIONES): <font color='red'>C${total_ventas:.2f}</font>",
                           styles['h3']))
 
             doc.build(elementos)
@@ -910,7 +922,7 @@ class POSApp:
                                  f"Ocurrió un error al exportar a PDF. Error: {e}")
 
     def cargar_registros_caja(self):
-        # ... (Función de cargar registros de caja sin cambios) ...
+        # ... (Función de cargar registros de caja) ...
         for item in self.caja_tree.get_children():
             self.caja_tree.delete(item)
 
@@ -920,12 +932,13 @@ class POSApp:
 
         for caja in cajas:
             fecha_cierre_disp = caja[3].split(' ')[0] if caja[3] else "N/A"
+            # CAMBIO 17: Reemplazar $ por C$ al cargar la ganancia
             self.caja_tree.insert("", "end", values=(
                 caja[0],
                 caja[1],
                 caja[2].split(' ')[0],
                 fecha_cierre_disp,
-                f"${caja[4]:.2f}"
+                f"C${caja[4]:.2f}"
             ), tags=caja[1])
 
             if caja[1] == 'Abierta':
