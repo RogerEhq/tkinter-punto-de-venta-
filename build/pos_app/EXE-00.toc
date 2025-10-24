@@ -3,8 +3,7 @@
  False,
  False,
  False,
- 'C:\\Users\\Estudiante\\PycharmProjects\\tkinter_punto de '
- 'venta\\.venv\\Lib\\site-packages\\PyInstaller\\bootloader\\images\\icon-windowed.ico',
+ ['C:\\Users\\Estudiante\\PycharmProjects\\tkinter_punto de venta\\icono.png'],
  None,
  False,
  False,
@@ -5744,7 +5743,7 @@
  [],
  False,
  False,
- 1761322966,
+ 1761337303,
  [('runw.exe',
    'C:\\Users\\Estudiante\\PycharmProjects\\tkinter_punto de '
    'venta\\.venv\\Lib\\site-packages\\PyInstaller\\bootloader\\Windows-64bit-intel\\runw.exe',
